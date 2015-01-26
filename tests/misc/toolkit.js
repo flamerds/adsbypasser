@@ -1,11 +1,15 @@
 'use strict';
 
-var Proxy = require('harmony-proxy');
-var _ = require('lodash');
 var fs = require('fs');
+var vm = require('vm');
+
+var Proxy = require('harmony-proxy');
+var bluebird = require('bluebird');
+var _ = require('lodash');
+var jsdom = require('jsdom');
 var connect = require('connect');
 var serveStatic = require('serve-static');
-var bluebird = require('bluebird');
+
 
 var defaultConfig = {
   version: 1,
@@ -67,6 +71,13 @@ function createGM (window, config) {
   };
 }
 
+function DOMParser () {
+}
+
+DOMParser.prototype.parseFromString = function (markup, type) {
+  return jsdom.jsdom(markup);
+};
+
 module.exports = {
 
   createFactory: function (factory) {
@@ -92,6 +103,46 @@ module.exports = {
   page1: SERVER_PAGE_1,
 
   page2: SERVER_PAGE_2,
+
+  evaluate: function (browser, userscript, config) {
+    config = config || {};
+    config = _.assign(_.clone(defaultConfig), config);
+
+    var window = browser.tabs.current.window;
+    var sandbox = createSandbox(window);
+    var GM = createGM(window, config);
+    sandbox.GM_xmlhttpRequest = GM.xmlhttpRequest;
+    sandbox.GM_getValue = GM.getValue;
+    sandbox.GM_setValue = GM.setValue;
+    sandbox.GM_registerMenuCommand = GM.registerMenuCommand;
+    sandbox.GM_getResourceText = function () {};
+    sandbox.GM_addStyle = function () {};
+    sandbox.GM_getResourceURL = function () {};
+    sandbox.GM_openInTab = function () {};
+    sandbox.console = console;
+    sandbox.setInterval = window.setInterval;
+    sandbox.clearInterval = window.clearInterval;
+    sandbox.setTimeout = window.setTimeout;
+    sandbox.clearTimeout = window.clearTimeout;
+    sandbox.Promise = bluebird.Promise;
+    sandbox.document = sandbox.window.document;
+    sandbox.DOMParser = DOMParser;
+
+    window.HTMLAnchorElement.prototype.click = function () {
+      var event = window.document.createEvent('HTMLEvents');
+      event.initEvent('click', false, false);
+      this.dispatchEvent(event);
+    };
+
+    sandbox = vm.createContext(sandbox);
+
+    vm.runInContext(userscript, sandbox);
+
+    // this is the old-school way, but we are living in jsdom
+    var event = window.document.createEvent('HTMLEvents');
+    event.initEvent('DOMContentLoaded', false, false);
+    window.document.dispatchEvent(event);
+  },
 
 };
 

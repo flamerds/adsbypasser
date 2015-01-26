@@ -27,6 +27,7 @@
     "build": "/usr/bin/env node --harmony-proxies ./node_modules/.bin/grunt",
     "test": "/usr/bin/env node --harmony-proxies ./node_modules/.bin/grunt test",
     "deploy": "/usr/bin/env node --harmony-proxies ./node_modules/.bin/grunt deploy",
-    "mirror": "/usr/bin/env node --harmony-proxies ./node_modules/.bin/grunt mirror"
+    "mirror": "/usr/bin/env node --harmony-proxies ./node_modules/.bin/grunt mirror",
+    "monitor": "/usr/bin/env node --harmony-proxies ./monitor/main.js"
   }
 }
